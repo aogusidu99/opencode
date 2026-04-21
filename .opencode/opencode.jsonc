@@ -6,7 +6,21 @@
       "packages/opencode/migration/*": "deny",
     },
   },
-  "mcp": {},
+  "mcp": {
+    "puppeteer": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    "gdrive": {
+      "type": "local",
+      "command": ["npx", "-y", "@isaacphi/mcp-gdrive"],
+      "environment": {
+        "CLIENT_ID": "YOUR_CLIENT_ID",
+        "CLIENT_SECRET": "YOUR_CLIENT_SECRET",
+        "GDRIVE_CREDS_DIR": "D:\\Code\\opencode\\.opencode\\mcp-gdrive"
+      }
+    }
+  },
   "tools": {
     "github-triage": false,
     "github-pr-search": false,
