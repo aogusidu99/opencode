@@ -176,6 +176,8 @@ export function Session() {
   const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
   const providers = createMemo(() => Model.index(sync.data.provider))
 
+  const [collapsedQuestions, setCollapsedQuestions] = createSignal<Set<string>>(new Set())
+
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
@@ -375,6 +377,35 @@ export function Session() {
 
   const command = useCommandDialog()
   command.register(() => [
+    {
+      title: "Collapse all answers",
+      value: "session.collapse_answers",
+      keybind: "messages_collapse_all",
+      category: "Session",
+      hidden: collapsedQuestions().size > 0,
+      slash: {
+        name: "collapse-all",
+      },
+      onSelect: (dialog) => {
+        const userMsgIds = messages().filter((m) => m.role === "user").map((m) => m.id)
+        setCollapsedQuestions(new Set(userMsgIds))
+        dialog.clear()
+      },
+    },
+    {
+      title: "Expand all answers",
+      value: "session.expand_answers",
+      keybind: "messages_expand_all",
+      category: "Session",
+      hidden: collapsedQuestions().size === 0,
+      slash: {
+        name: "expand-all",
+      },
+      onSelect: (dialog) => {
+        setCollapsedQuestions(new Set<string>())
+        dialog.clear()
+      },
+    },
     {
       title: session()?.share?.url ? "Copy share link" : "Share session",
       value: "session.share",
@@ -1131,6 +1162,16 @@ export function Session() {
                     <Match when={message.role === "user"}>
                       <UserMessage
                         index={index()}
+                        collapsed={collapsedQuestions().has(message.id)}
+                        onToggleCollapse={() => {
+                          if (renderer.getSelection()?.getSelectedText()) return
+                          setCollapsedQuestions((prev) => {
+                            const next = new Set(prev)
+                            if (next.has(message.id)) next.delete(message.id)
+                            else next.add(message.id)
+                            return next
+                          })
+                        }}
                         onMouseUp={() => {
                           if (renderer.getSelection()?.getSelectedText()) return
                           dialog.replace(() => (
@@ -1147,11 +1188,13 @@ export function Session() {
                       />
                     </Match>
                     <Match when={message.role === "assistant"}>
-                      <AssistantMessage
-                        last={lastAssistant()?.id === message.id}
-                        message={message as AssistantMessage}
-                        parts={sync.data.part[message.id] ?? []}
-                      />
+                      <Show when={!collapsedQuestions().has((message as AssistantMessage).parentID)}>
+                        <AssistantMessage
+                          last={lastAssistant()?.id === message.id}
+                          message={message as AssistantMessage}
+                          parts={sync.data.part[message.id] ?? []}
+                        />
+                      </Show>
                     </Match>
                   </Switch>
                 )}
@@ -1234,6 +1277,8 @@ function UserMessage(props: {
   onMouseUp: () => void
   index: number
   pending?: string
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }) {
   const ctx = use()
   const local = useLocal()
@@ -1265,48 +1310,88 @@ function UserMessage(props: {
             onMouseOut={() => {
               setHover(false)
             }}
-            onMouseUp={props.onMouseUp}
             paddingTop={1}
             paddingBottom={1}
             paddingLeft={2}
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
+            flexDirection="row"
           >
-            <text fg={theme.text}>{text()?.text}</text>
-            <Show when={files().length}>
-              <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
-                <For each={files()}>
-                  {(file) => {
-                    const bg = createMemo(() => {
-                      if (file.mime.startsWith("image/")) return theme.accent
-                      if (file.mime === "application/pdf") return theme.primary
-                      return theme.secondary
-                    })
-                    return (
-                      <text fg={theme.text}>
-                        <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
-                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
-                      </text>
-                    )
-                  }}
-                </For>
+            <box flexGrow={1} flexDirection="row">
+              <box
+                onMouseUp={(e) => {
+                  e.stopPropagation()
+                  props.onToggleCollapse?.()
+                }}
+              >
+                <text fg={theme.textMuted}>{props.collapsed ? "[+] " : "[-] "}</text>
               </box>
-            </Show>
-            <Show
-              when={queued()}
-              fallback={
-                <Show when={ctx.showTimestamps()}>
+              <box
+                flexGrow={1}
+                flexDirection="column"
+                onMouseOver={() => {
+                  setHover(true)
+                }}
+                onMouseOut={() => {
+                  setHover(false)
+                }}
+                onMouseUp={(e) => {
+                  e.stopPropagation()
+                  props.onMouseUp()
+                }}
+                backgroundColor={hover() ? theme.backgroundElement : undefined}
+              >
+                <text fg={theme.text}>{text()?.text}</text>
+                <Show when={files().length}>
+                  <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
+                  <For each={files()}>
+                    {(file) => {
+                      const bg = createMemo(() => {
+                        if (file.mime.startsWith("image/")) return theme.accent
+                        if (file.mime === "application/pdf") return theme.primary
+                        return theme.secondary
+                      })
+                      return (
+                        <text fg={theme.text}>
+                          <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
+                          <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                        </text>
+                      )
+                    }}
+                  </For>
+                </box>
+              </Show>
+                <Show
+                  when={queued()}
+                  fallback={
+                    <Show when={ctx.showTimestamps()}>
+                      <text fg={theme.textMuted}>
+                        <span style={{ fg: theme.textMuted }}>
+                          {Locale.todayTimeOrDateTime(props.message.time.created)}
+                        </span>
+                      </text>
+                    </Show>
+                  }
+                >
                   <text fg={theme.textMuted}>
-                    <span style={{ fg: theme.textMuted }}>
-                      {Locale.todayTimeOrDateTime(props.message.time.created)}
-                    </span>
+                    <span style={{ bg: color(), fg: queuedFg(), bold: true }}> QUEUED </span>
                   </text>
                 </Show>
-              }
-            >
-              <text fg={theme.textMuted}>
-                <span style={{ bg: color(), fg: queuedFg(), bold: true }}> QUEUED </span>
-              </text>
+              </box>
+            </box>
+            <Show when={hover()}>
+              <box
+                onMouseUp={(e) => {
+                  e.stopPropagation()
+                  props.onMouseUp()
+                }}
+                paddingLeft={1}
+                paddingRight={1}
+                paddingTop={1}
+                paddingBottom={1}
+              >
+                <text fg={theme.text}>⋮</text>
+              </box>
             </Show>
           </box>
         </box>

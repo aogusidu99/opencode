@@ -14,5 +14,9 @@
         }
       }
     ]
-  ]
+  ],
+  "keybinds": {
+    "messages_collapse_all": "<leader>[",
+    "messages_expand_all": "<leader>]"
+  }
 }

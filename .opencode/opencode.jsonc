@@ -3,8 +3,11 @@
   "provider": {},
   "permission": {
     "edit": {
-      "packages/opencode/migration/*": "deny",
+      "packages/opencode/migration/*": "deny"
     },
+    "external_directory": {
+      "G:\\我的云端硬盘\\MCP\\**": "allow"
+    }
   },
   "mcp": {
     "puppeteer": {
@@ -23,6 +26,6 @@
   },
   "tools": {
     "github-triage": false,
-    "github-pr-search": false,
-  },
+    "github-pr-search": false
+  }
 }
