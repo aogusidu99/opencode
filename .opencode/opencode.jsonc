@@ -3,16 +3,17 @@
   "provider": {},
   "permission": {
     "edit": {
-      "packages/opencode/migration/*": "deny"
+      "*": "ask",
+      "G:\\我的云端硬盘\\!Movable\\Pic\\Doc\\**": "allow",
+      "packages/opencode/migration/*": "deny",
     },
-    "external_directory": {
-      "G:\\我的云端硬盘\\MCP\\**": "allow"
-    }
+    "external_directory": "allow",
   },
   "mcp": {
     "puppeteer": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"]
+      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": false,
     },
     "gdrive": {
       "type": "local",
@@ -20,12 +21,16 @@
       "environment": {
         "CLIENT_ID": "YOUR_CLIENT_ID",
         "CLIENT_SECRET": "YOUR_CLIENT_SECRET",
-        "GDRIVE_CREDS_DIR": "D:\\Code\\opencode\\.opencode\\mcp-gdrive"
-      }
-    }
+        "GDRIVE_CREDS_DIR": "D:\\Code\\opencode\\.opencode\\mcp-gdrive",
+      },
+      "enabled": false,
+    },
   },
   "tools": {
     "github-triage": false,
-    "github-pr-search": false
-  }
+    "github-pr-search": false,
+  },
+  "skills": {
+    "paths": [".opencode/skills"],
+  },
 }

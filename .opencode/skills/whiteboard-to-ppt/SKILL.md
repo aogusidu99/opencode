@@ -1,0 +1,54 @@
+---
+name: whiteboard-to-ppt
+description: Convert online whiteboards into editable PPTX
+---
+
+# 白板转PPT (whiteboard-to-ppt-builder)
+
+该 Skill 旨在通过无头浏览器获取在线白板截图，并结合大模型（Gemini Vision）的强大视觉识别能力，将白板中的手写笔记、框图、连线，全自动转化为格式统一、元素原生可编辑（包含动态连接线）的多页 PowerPoint 演示文稿。
+
+## 适用场景与技术依赖
+
+### 输入源
+
+- 只能通过网页渲染获取像素级画面的在线白板链接。
+
+### 关键依赖
+
+1. `puppeteer` 工具：用于网页加载与高清截图。
+2. `Gemini Vision` 能力：用于图文提取与空间结构重构。
+3. `python-pptx` (或 Node 环境下类似的 PPTX 生成库)：用于原生文档汇编。
+
+## 工作流与子技能 (Sub-skills)
+
+### 1. 视源获取子skill (Web Capture)
+
+负责准确无误地从提供的 URL 中捕获高质量图像。
+
+- 高分屏模拟：使用 Puppeteer 打开链接时，强制设置 `deviceScaleFactor` 为 2 或 3，生成高清视网膜级别的截图，保证细小手写字体的清晰度。
+- 等待渲染：确保白板组件加载完毕（如等待 networkidle0 或特定 canvas 元素）后再执行全页截图。
+- 优于白板无限大小，仅仅抓取有内容的部分
+
+### 2. 视觉解析与大模型重构子skill (Vision Parsing & JSON Restructuring)
+
+这是核心步骤。将截图交由大模型进行深度分析，并将非结构化的像素转化为严格的结构化 JSON 数据。
+
+- 强制结构化提示词：要求大模型输出包含坐标的 JSON Schema。
+  - 节点 (Objects/Nodes)：识别图中的文本、矩形框、圆等。返回：`ID`、`形状类型 (shape_type)`、`识别文本 (text)`、以及归一化坐标 `[ymin, xmin, ymax, xmax]`。其中中英文混排及图表框中的文字需精准提取。
+  - 连接关系 (Edges/Connectors)：识别带箭头或不带箭头的连线。返回：`起点节点ID (from_id)`、`终点节点ID (to_id)`。
+- 逻辑包含处理：要求模型判断文本与图形的包含关系，若文本位于边框内，必须合并为一个带有内部文本的形状对象，不得拆分为独立元素。
+
+### 3. 空间聚类与切片子skill (Spatial Clustering & Pagination)
+
+将大画板智能切分为多页幻灯片。
+
+- 密度聚类算法：根据大模型返回的组件坐标集合，进行空间距离测算。
+- 自动分页：当某些模块之间的物理坐标间距明显大于常规间隙（即“相隔较远”）时，将其切割为不同的逻辑区块。每个逻辑区块按白板位置顺序映射到 PPT 的不同页面（Slide 1, Slide 2...）。
+
+### 4. 原生 PPT 组装与渲染子skill (PPTX Assembly)
+
+将大模型输出的 JSON 结构在目标 PPT 文件中完成“物理重建”。
+
+- 格式还原与美化：绝对禁止贴图。代码根据 JSON 坐标按比例计算出 PPT 画布上的实际 X、Y 和宽高。插入原生的文本框和形状。
+- 动态连接器 (Dynamic Connectors)：使用 PPT 原生的 Connector API。遍历 JSON 中的连接关系，将线条的两端代码级地“锚定”在对应起止形状的边缘锚点上，实现拖动形状时箭头跟随的效果。
+- 套用母版：默认应用指定的样式或母版，统一字体排版和线条颜色，将潦草的手写白板彻底格式化为专业的汇报级 PPT，并保存至目标文件夹中。

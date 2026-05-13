@@ -4,6 +4,13 @@
 - Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
 
+## Local File Policy
+
+- Default directory for file edits and modifications is the currently opened folder in opencode.
+- Files under the currently opened folder may be edited without asking.
+- Before editing or modifying files outside the currently opened folder, ask the user for confirmation.
+- Reading or viewing files generally does not require confirmation.
+
 ## Style Guide
 
 ### General Principles
