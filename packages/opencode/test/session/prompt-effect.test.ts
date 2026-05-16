@@ -11,6 +11,7 @@ import { LSP } from "../../src/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
+import { Hooks } from "../../src/hooks"
 import { Provider as ProviderSvc } from "../../src/provider"
 import { Env } from "../../src/env"
 import { ModelID, ProviderID } from "../../src/provider/schema"
@@ -162,6 +163,7 @@ function makeHttp() {
     Plugin.defaultLayer,
     Config.defaultLayer,
     ProviderSvc.defaultLayer,
+    Hooks.defaultLayer,
     lsp,
     mcp,
     AppFileSystem.defaultLayer,

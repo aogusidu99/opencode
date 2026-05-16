@@ -6,6 +6,7 @@
   "permission": {
     "edit": {
       "*": "ask",
+      "**": "allow",
       "*.lock": "deny",
       "*.lockb": "deny",
       "pnpm-lock.yaml": "deny",
@@ -14,5 +15,34 @@
     },
     "read": "allow",
     "external_directory": "allow"
+  },
+  "mcp": {
+    "gdrive": {
+      "type": "local",
+      "command": ["npx", "-y", "@hachiai/mcp-google-drive"],
+      "enabled": true,
+      "environment": {
+        "GOOGLE_DRIVE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
+        "GOOGLE_DRIVE_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
+      }
+    },
+    "gmail": {
+      "type": "local",
+      "command": ["npx", "-y", "@gongrzhe/server-gmail-autoauth-mcp"],
+      "enabled": true,
+      "environment": {
+        "GMAIL_OAUTH_PATH": "C:\\Users\\aogus\\.gmail-mcp\\gcp-oauth.keys.json",
+        "GMAIL_CREDENTIALS_PATH": "C:\\Users\\aogus\\.gmail-mcp\\credentials.json"
+      }
+    },
+    "gcalendar": {
+      "type": "local",
+      "command": ["npx", "-y", "@cocal/google-calendar-mcp"],
+      "enabled": true,
+      "environment": {
+        "GOOGLE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
+        "GOOGLE_CALENDAR_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
+      }
+    }
   }
 }

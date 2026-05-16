@@ -51,6 +51,20 @@ packages/
 ## 本地文件策略 (Local File Policy)
 
 
+## 定制化与全局配置同步 (Customization & Global Config Sync)
+
+本项目维护的是一个经过深度定制的 OpenCode 个人版本。为了确保个人全局设置（如自定义 Agent、快捷命令、模型参数、钩子插件）能够在不同的开发设备上无缝同步，采用了以下配置架构：
+
+1. **程序与配置分离**：无论软件以源码运行还是编译为桌面程序，OpenCode 始终遵守操作系统的 XDG 规范，固定读取系统的用户目录（在 Windows 上为 `C:\Users\<UserName>\.config\opencode`）来加载全局配置。
+2. **桥接同步机制 (Dotfiles)**：
+   - 本仓库内专门维护了 `opencode-global-config/` 目录，用于安全存储并利用 Git 同步个人的定制化全局配置。
+   - **环境配置要求**：在新设备上 clone 本仓库后，必须使用系统级的“目录联接”将操作系统的默认配置路径桥接到源码中的这个目录，从而实现配置数据的“骗局同步”。
+   - **桥接命令示例 (Windows PowerShell)**：
+     ```powershell
+     New-Item -ItemType Junction -Path "C:\Users\<你的用户名>\.config\opencode" -Target "<克隆路径>\opencode\opencode-global-config"
+     ```
+3. **配置优先级**：项目根目录下的 `.opencode/` 用于存储仅限当前代码库的“项目级”配置（例如编译脚本专用的 hook），它可以覆盖（Override）上述的全局配置。
+
 ## 代码风格指南 (Style Guide)
 
 ### 通用原则 (General Principles)
