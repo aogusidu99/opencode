@@ -511,6 +511,28 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       },
     },
     {
+      title: `${local.mcp.isEnabled("gemini-search") ? "Disable" : "Enable"} web search`,
+      value: "mcp.search.toggle",
+      keybind: "search_toggle",
+      category: "Agent",
+      slash: {
+        name: "search",
+        aliases: ["websearch", "web"],
+      },
+      onSelect: async (dialog) => {
+        await local.mcp.toggle("gemini-search")
+        const status = await sdk.client.mcp.status()
+        if (status.data) sync.set("mcp", status.data)
+        const enabled = local.mcp.isEnabled("gemini-search")
+        toast.show({
+          variant: "info",
+          message: enabled ? "🔍 Web search enabled" : "Web search disabled",
+          duration: 2000,
+        })
+        dialog.clear()
+      },
+    },
+    {
       title: "Agent cycle",
       value: "agent.cycle",
       keybind: "agent_cycle",

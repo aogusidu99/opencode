@@ -117,6 +117,7 @@ const KeybindsSchema = Schema.Struct({
   tips_toggle: keybind("<leader>h", "Toggle tips on home screen"),
   plugin_manager: keybind("none", "Open plugin manager dialog"),
   display_thinking: keybind("none", "Toggle thinking blocks visibility"),
+  search_toggle: keybind("<leader>w", "Toggle web search (gemini-search MCP)"),
 }).annotate({ identifier: "KeybindsConfig" })
 
 export type Keybinds = Schema.Schema.Type<typeof KeybindsSchema>
