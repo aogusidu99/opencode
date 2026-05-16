@@ -1,0 +1,62 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "experimental": {
+    "disable_paste_summary": true
+  },
+  "keybinds": {
+    "model_cycle_favorite": "f4",
+    "model_cycle_favorite_reverse": "shift+f4"
+  },
+  "permission": {
+    "edit": {
+      "*": "ask",
+      "**": "allow",
+      "*.lock": "deny",
+      "*.lockb": "deny",
+      "pnpm-lock.yaml": "deny",
+      ".env*": "deny",
+      ".git/**": "deny"
+    },
+    "read": "allow",
+    "external_directory": "allow"
+  },
+  "mcp": {
+    "puppeteer": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": true
+    },
+    "gdrive": {
+      "type": "local",
+      "command": ["npx", "-y", "@hachiai/mcp-google-drive"],
+      "enabled": true,
+      "environment": {
+        "GOOGLE_DRIVE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
+        "GOOGLE_DRIVE_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
+      }
+    },
+    "gmail": {
+      "type": "local",
+      "command": ["npx", "-y", "@gongrzhe/server-gmail-autoauth-mcp"],
+      "enabled": false,
+      "environment": {
+        "GMAIL_OAUTH_PATH": "C:\\Users\\aogus\\.gmail-mcp\\gcp-oauth.keys.json",
+        "GMAIL_CREDENTIALS_PATH": "C:\\Users\\aogus\\.gmail-mcp\\credentials.json"
+      }
+    },
+    "gcalendar": {
+      "type": "local",
+      "command": ["npx", "-y", "@cocal/google-calendar-mcp"],
+      "enabled": false,
+      "environment": {
+        "GOOGLE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
+        "GOOGLE_CALENDAR_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
+      }
+    },
+    "gemini-search": {
+      "type": "local",
+      "command": ["node", "C:\\Users\\aogus\\.config\\opencode\\mcp-scripts\\gemini-search\\server.mjs"],
+      "enabled": true
+    }
+  }
+}
