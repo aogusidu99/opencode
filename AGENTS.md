@@ -1,8 +1,52 @@
-- To regenerate the JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
+# OpenCode
+
+> Open-source AI coding agent with TUI, built on Bun + TypeScript + Effect.
+
+- **Runtime**: Bun
+- **Language**: TypeScript (strict)
+- **Framework**: Effect (functional effect system)
+- **ORM**: Drizzle (SQLite)
+- **Monorepo**: Turbo
+- **Default branch**: `dev` (local `main` ref may not exist; use `dev` or `origin/dev` for diffs)
+
+## Project Structure
+
+```
+packages/
+├── opencode/          ← Core agent (main codebase)
+│   └── src/
+│       ├── agent/         Agent definitions & prompts
+│       ├── config/        Configuration system (self-export pattern)
+│       ├── plugin/        Plugin loading & hooks
+│       ├── session/       Chat session & LLM orchestration
+│       ├── tool/          Built-in tools
+│       └── provider/      LLM provider adapters
+├── plugin/            ← Plugin SDK (@opencode-ai/plugin)
+├── sdk/               ← Client SDKs (JS/Go)
+├── ui/                ← React UI components
+├── web/               ← Web app
+└── app/               ← Tauri desktop app
+```
+
+## Commands
+
+| Task | Command | Run From |
+|:-----|:--------|:---------|
+| Type check | `bun typecheck` | Package dirs (e.g. `packages/opencode`), never `tsc` directly |
+| Test | `bun test` | Package dirs (NOT repo root; guard: `do-not-run-tests-from-root`) |
+| Regenerate JS SDK | `./packages/sdk/js/script/build.ts` | Repo root |
+
+## Workflow
+
 - ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
 - Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+
+### Definition of Done
+
+A task is complete only when:
+1. `bun typecheck` passes from the relevant package directory
+2. Related tests pass (`bun test`)
+3. No new `any` types introduced
 
 ## Local File Policy
 
@@ -103,8 +147,3 @@ const table = sqliteTable("session", {
 
 - Avoid mocks as much as possible
 - Test actual implementation, do not duplicate logic into tests
-- Tests cannot run from repo root (guard: `do-not-run-tests-from-root`); run from package dirs like `packages/opencode`.
-
-## Type Checking
-
-- Always run `bun typecheck` from package directories (e.g., `packages/opencode`), never `tsc` directly.

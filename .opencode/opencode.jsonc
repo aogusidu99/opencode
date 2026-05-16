@@ -33,4 +33,7 @@
   "skills": {
     "paths": [".opencode/skills"],
   },
+  "plugin": [
+    ".opencode/plugins/hooks-logger.js",
+  ],
 }

@@ -49,6 +49,7 @@ import { InstanceState } from "@/effect"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { EffectBridge } from "@/effect"
+import { Hooks } from "@/hooks"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -103,6 +104,7 @@ export const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
+    const hooks = yield* Hooks.Service
     const runner = Effect.fn("SessionPrompt.runner")(function* () {
       return yield* EffectBridge.make()
     })
@@ -416,6 +418,19 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
                   { args },
                 )
+                const hookBlocked = yield* hooks
+                  .run("PreToolUse", { tool: item.id, args, sessionID: ctx.sessionID, callID: ctx.callID })
+                  .pipe(
+                    Effect.map(() => undefined as { title: string; output: string; metadata: Record<string, unknown> } | undefined),
+                    Effect.catch((err: Hooks.BlockedError) =>
+                      Effect.succeed({
+                        title: "Hook blocked",
+                        output: `Tool execution was blocked by a PreToolUse hook (matcher: ${err.hook.matcher}).`,
+                        metadata: { blocked: true },
+                      }),
+                    ),
+                  )
+                if (hookBlocked) return hookBlocked
                 const result = yield* item.execute(args, ctx)
                 const output = {
                   ...result,
@@ -426,6 +441,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     messageID: input.processor.message.id,
                   })),
                 }
+                yield* hooks
+                  .run("PostToolUse", { tool: item.id, args, result: output, sessionID: ctx.sessionID, callID: ctx.callID })
+                  .pipe(Effect.catch(() => Effect.void))
                 yield* plugin.trigger(
                   "tool.execute.after",
                   { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -457,6 +475,20 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
                 { args },
               )
+              const mcpHookBlocked = yield* hooks
+                .run("PreToolUse", { tool: key, args, sessionID: ctx.sessionID, callID: opts.toolCallId })
+                .pipe(
+                  Effect.map(() => undefined as { title: string; output: string; metadata: Record<string, unknown>; content: { type: "text"; text: string }[] } | undefined),
+                  Effect.catch((err: Hooks.BlockedError) =>
+                    Effect.succeed({
+                      title: "Hook blocked",
+                      output: `Tool execution was blocked by a PreToolUse hook (matcher: ${err.hook.matcher}).`,
+                      metadata: { blocked: true },
+                      content: [{ type: "text" as const, text: `Tool blocked by hook: ${err.hook.matcher}` }],
+                    }),
+                  ),
+                )
+              if (mcpHookBlocked) return mcpHookBlocked
               yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
               const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.promise(() =>
                 execute(args, opts),
@@ -466,6 +498,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
                 result,
               )
+              yield* hooks
+                .run("PostToolUse", { tool: key, args, result, sessionID: ctx.sessionID, callID: opts.toolCallId })
+                .pipe(Effect.catch(() => Effect.void))
 
               const textParts: string[] = []
               const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
@@ -1695,6 +1730,7 @@ export const defaultLayer = Layer.suspend(() =>
         Agent.defaultLayer,
         SystemPrompt.defaultLayer,
         LLM.defaultLayer,
+        Hooks.defaultLayer,
         Bus.layer,
         CrossSpawnSpawner.defaultLayer,
       ),
