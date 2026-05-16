@@ -1,141 +1,137 @@
 # OpenCode
 
-> Open-source AI coding agent with TUI, built on Bun + TypeScript + Effect.
+> 开源 AI 编程智能体，附带 TUI 界面。基于 Bun + TypeScript + Effect 构建。
 
-- **Runtime**: Bun
-- **Language**: TypeScript (strict)
-- **Framework**: Effect (functional effect system)
+- **运行环境 (Runtime)**: Bun
+- **语言 (Language)**: TypeScript (严格模式)
+- **框架 (Framework)**: Effect (函数式 effect 系统)
 - **ORM**: Drizzle (SQLite)
-- **Monorepo**: Turbo
-- **Default branch**: `dev` (local `main` ref may not exist; use `dev` or `origin/dev` for diffs)
+- **代码仓库 (Monorepo)**: Turbo
+- **默认分支 (Default branch)**: `dev` (本地可能不存在 `main` 分支；请使用 `dev` 或 `origin/dev` 查看差异)
 
-## Project Structure
+## 项目结构 (Project Structure)
 
 ```
 packages/
-├── opencode/          ← Core agent (main codebase)
+├── opencode/          ← 核心智能体 (主代码库)
 │   └── src/
-│       ├── agent/         Agent definitions & prompts
-│       ├── config/        Configuration system (self-export pattern)
-│       ├── plugin/        Plugin loading & hooks
-│       ├── session/       Chat session & LLM orchestration
-│       ├── tool/          Built-in tools
-│       └── provider/      LLM provider adapters
-├── plugin/            ← Plugin SDK (@opencode-ai/plugin)
-├── sdk/               ← Client SDKs (JS/Go)
-├── ui/                ← React UI components
-├── web/               ← Web app
-└── app/               ← Tauri desktop app
+│       ├── agent/         Agent 定义与提示词 (prompts)
+│       ├── config/        配置系统 (self-export 模式)
+│       ├── plugin/        插件加载与钩子 (hooks)
+│       ├── session/       聊天会话与大模型编排
+│       ├── tool/          内置工具
+│       └── provider/      大模型提供商适配器
+├── plugin/            ← 插件 SDK (@opencode-ai/plugin)
+├── sdk/               ← 客户端 SDK (JS/Go)
+├── ui/                ← React UI 组件
+├── web/               ← Web 应用程序
+└── app/               ← Tauri 桌面应用程序
 ```
 
-## Commands
+## 命令 (Commands)
 
-| Task | Command | Run From |
+| 任务 | 命令 | 运行目录 |
 |:-----|:--------|:---------|
-| Type check | `bun typecheck` | Package dirs (e.g. `packages/opencode`), never `tsc` directly |
-| Test | `bun test` | Package dirs (NOT repo root; guard: `do-not-run-tests-from-root`) |
-| Regenerate JS SDK | `./packages/sdk/js/script/build.ts` | Repo root |
+| 类型检查 | `bun typecheck` | 包目录 (例如 `packages/opencode`)，绝对不要直接运行 `tsc` |
+| 测试 | `bun test` | 包目录 (注意不要在仓库根目录运行；有安全守卫：`do-not-run-tests-from-root`) |
+| 重新生成 JS SDK | `./packages/sdk/js/script/build.ts` | 仓库根目录 |
 
-## Workflow
+## 工作流 (Workflow)
 
-- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
+- 在适用的情况下，请始终使用并行工具（ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE）。
+- 优先选择自动化操作：除非缺少必要信息或涉及到安全/不可逆操作，否则应在不询问用户确认的情况下直接执行被请求的操作。
 
-### Definition of Done
+### 完成标准 (Definition of Done)
 
-A task is complete only when:
-1. `bun typecheck` passes from the relevant package directory
-2. Related tests pass (`bun test`)
-3. No new `any` types introduced
+一项任务只有在满足以下条件时才算完成：
+1. 在相关的包目录下运行 `bun typecheck` 能够通过
+2. 相关的测试运行通过 (`bun test`)
+3. 没有引入新的 `any` 类型
 
-## Local File Policy
+## 本地文件策略 (Local File Policy)
 
-- Default directory for file edits and modifications is the currently opened folder in opencode.
-- Files under the currently opened folder may be edited without asking.
-- Before editing or modifying files outside the currently opened folder, ask the user for confirmation.
-- Reading or viewing files generally does not require confirmation.
 
-## Style Guide
+## 代码风格指南 (Style Guide)
 
-### General Principles
+### 通用原则 (General Principles)
 
-- Keep things in one function unless composable or reusable
-- Avoid `try`/`catch` where possible
-- Avoid using the `any` type
-- Use Bun APIs when possible, like `Bun.file()`
-- Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
-- Prefer functional array methods (flatMap, filter, map) over for loops; use type guards on filter to maintain type inference downstream
-- In `src/config`, follow the existing self-export pattern at the top of the file (for example `export * as ConfigAgent from "./agent"`) when adding a new config module.
+- 除非为了可组合性或可重用性，否则尽量将逻辑保持在一个函数内。
+- 尽可能避免使用 `try`/`catch`。
+- 避免使用 `any` 类型。
+- 尽可能使用 Bun APIs，例如 `Bun.file()`。
+- 尽可能依赖类型推断；除非出于导出（exports）或清晰度的必要，否则避免使用显式的类型注解或接口。
+- 优先使用函数式数组方法（flatMap, filter, map）而不是 for 循环；在 filter 上使用类型守卫（type guards）以保持下游的类型推断。
+- 在 `src/config` 中，添加新的配置模块时，请遵循文件顶部现有的自我导出模式（例如 `export * as ConfigAgent from "./agent"`）。
 
-Reduce total variable count by inlining when a value is only used once.
+当一个值只被使用一次时，通过内联（inlining）来减少变量总数。
 
 ```ts
-// Good
+// 推荐 (Good)
 const journal = await Bun.file(path.join(dir, "journal.json")).json()
 
-// Bad
+// 不推荐 (Bad)
 const journalPath = path.join(dir, "journal.json")
 const journal = await Bun.file(journalPath).json()
 ```
 
-### Destructuring
+### 解构 (Destructuring)
 
-Avoid unnecessary destructuring. Use dot notation to preserve context.
+避免不必要的解构。使用点号（dot notation）语法来保留上下文。
 
 ```ts
-// Good
+// 推荐 (Good)
 obj.a
 obj.b
 
-// Bad
+// 不推荐 (Bad)
 const { a, b } = obj
 ```
 
-### Variables
+### 变量 (Variables)
 
-Prefer `const` over `let`. Use ternaries or early returns instead of reassignment.
+优先使用 `const` 而不是 `let`。使用三元运算符或提前返回（early returns）来代替重新赋值。
 
 ```ts
-// Good
+// 推荐 (Good)
 const foo = condition ? 1 : 2
 
-// Bad
+// 不推荐 (Bad)
 let foo
 if (condition) foo = 1
 else foo = 2
 ```
 
-### Control Flow
+### 控制流 (Control Flow)
 
-Avoid `else` statements. Prefer early returns.
+避免使用 `else` 语句。优先使用提前返回（early returns）。
 
 ```ts
-// Good
+// 推荐 (Good)
 function foo() {
   if (condition) return 1
   return 2
 }
 
-// Bad
+// 不推荐 (Bad)
 function foo() {
   if (condition) return 1
   else return 2
 }
 ```
 
-### Schema Definitions (Drizzle)
+### 数据库 Schema 定义 (Drizzle)
 
-Use snake_case for field names so column names don't need to be redefined as strings.
+字段名使用蛇形命名法（snake_case），这样就不需要把列名重新定义为字符串了。
 
 ```ts
-// Good
+// 推荐 (Good)
 const table = sqliteTable("session", {
   id: text().primaryKey(),
   project_id: text().notNull(),
   created_at: integer().notNull(),
 })
 
-// Bad
+// 不推荐 (Bad)
 const table = sqliteTable("session", {
   id: text("id").primaryKey(),
   projectID: text("project_id").notNull(),
@@ -143,7 +139,7 @@ const table = sqliteTable("session", {
 })
 ```
 
-## Testing
+## 测试 (Testing)
 
-- Avoid mocks as much as possible
-- Test actual implementation, do not duplicate logic into tests
+- 尽可能避免使用 mocks。
+- 测试实际的实现逻辑，不要在测试代码中复制/重写业务逻辑。
