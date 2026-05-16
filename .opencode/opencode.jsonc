@@ -9,23 +9,7 @@
     },
     "external_directory": "allow",
   },
-  "mcp": {
-    "puppeteer": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
-      "enabled": true,
-    },
-    "gdrive": {
-      "type": "local",
-      "command": ["npx", "-y", "@isaacphi/mcp-gdrive"],
-      "environment": {
-        "CLIENT_ID": "YOUR_CLIENT_ID",
-        "CLIENT_SECRET": "YOUR_CLIENT_SECRET",
-        "GDRIVE_CREDS_DIR": "D:\\Code\\opencode\\.opencode\\mcp-gdrive",
-      },
-      "enabled": true,
-    },
-  },
+  "mcp": {},
   "tools": {
     "github-triage": false,
     "github-pr-search": false,
