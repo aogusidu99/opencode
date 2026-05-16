@@ -448,6 +448,33 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       },
     },
     {
+      title: "Toggle model favorite",
+      value: "model.favorite_toggle",
+      keybind: "model_favorite_toggle",
+      category: "Agent",
+      hidden: true,
+      onSelect: () => {
+        const current = local.model.current()
+        if (!current) {
+          toast.show({
+            variant: "warning",
+            message: "No model selected",
+            duration: 3000,
+          })
+          return
+        }
+        const exists = local.model
+          .favorite()
+          .some((item) => item.providerID === current.providerID && item.modelID === current.modelID)
+        local.model.toggleFavorite(current)
+        toast.show({
+          variant: "info",
+          message: exists ? "Removed favorite model" : "Added favorite model",
+          duration: 2000,
+        })
+      },
+    },
+    {
       title: "Model cycle",
       value: "model.cycle_recent",
       keybind: "model_cycle_recent",
