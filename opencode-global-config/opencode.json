@@ -43,6 +43,11 @@
         "GOOGLE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
         "GOOGLE_CALENDAR_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
       }
+    },
+    "gemini-search": {
+      "type": "local",
+      "command": ["node", "C:\\Users\\aogus\\.config\\opencode\\mcp-scripts\\gemini-search\\server.mjs"],
+      "enabled": true
     }
   }
 }

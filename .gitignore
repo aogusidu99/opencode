@@ -33,3 +33,6 @@ tsconfig.tsbuildinfo
 
 
 
+
+opencode-global-config/mcp-scripts/gemini-search/node_modules/
+opencode-global-config/mcp-scripts/gemini-search/package-lock.json
