@@ -3,6 +3,10 @@
   "experimental": {
     "disable_paste_summary": true
   },
+  "keybinds": {
+    "model_cycle_favorite": "f4",
+    "model_cycle_favorite_reverse": "shift+f4"
+  },
   "permission": {
     "edit": {
       "*": "ask",
