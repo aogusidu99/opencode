@@ -1,5 +1,0 @@
-﻿{
-  "_comment": "此文件由 gdrive-oauth.mjs 运行后自动生成，真实 token 存放于 ~/.config/mcp-google-drive/tokens.json",
-  "access_token": "${GOOGLE_ACCESS_TOKEN}",
-  "refresh_token": "${GOOGLE_REFRESH_TOKEN}"
-}

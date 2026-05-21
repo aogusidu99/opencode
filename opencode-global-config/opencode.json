@@ -7,13 +7,39 @@
     "edit": {
       "*": "ask",
       "**": "allow",
-      "*.lock": "deny",
-      "*.lockb": "deny",
-      "pnpm-lock.yaml": "deny",
-      ".env*": "deny",
-      ".git/**": "deny"
+      "*.lock": "ask",
+      "*.lockb": "ask",
+      "*lock*": "ask",
+      "pnpm-lock.yaml": "ask",
+      ".env*": "ask",
+      ".git/**": "ask"
     },
     "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "task": "allow",
+    "skill": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "codesearch": "allow",
+    "todowrite": "allow",
+    "bash": {
+      "*": "allow",
+      "rm -rf*": "ask",
+      "rm -fr*": "ask",
+      "*Remove-Item* -Recurse* -Force*": "ask",
+      "sudo*": "ask",
+      "git push origin main*": "ask",
+      "npm publish*": "ask",
+      "docker push*": "ask",
+      "*deploy*": "ask",
+      "*prod*": "ask",
+      "aws*": "ask",
+      "vercel*": "ask",
+      "git reset --hard*": "ask",
+      "git checkout --*": "ask"
+    },
     "external_directory": "allow"
   },
   "mcp": {
@@ -46,7 +72,7 @@
     },
     "gemini-search": {
       "type": "local",
-      "command": ["node", "C:\\Users\\aogus\\.config\\opencode\\mcp-scripts\\gemini-search\\server.mjs"],
+      "command": ["node", "D:\\Code\\opencode\\opencode-global-config\\mcp-scripts\\gemini-search\\server.mjs"],
       "enabled": true
     }
   }
