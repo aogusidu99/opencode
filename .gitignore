@@ -37,12 +37,6 @@ tsconfig.tsbuildinfo
 opencode-global-config/mcp-scripts/gemini-search/node_modules/
 opencode-global-config/mcp-scripts/gemini-search/package-lock.json
 
-# OAuth credentials / tokens — never commit (secrets policy)
-gdrive-credentials.json
-gdrive-token-result.json
-*-credentials.json
-*-token-result.json
-
 # A 类共享 skill junction（源在 Harness Universal），不跟踪其内容
 opencode-global-config/skills/skill-creator/
 opencode-global-config/skills/align-agent-harness/
