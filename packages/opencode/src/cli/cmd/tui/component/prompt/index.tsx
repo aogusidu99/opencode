@@ -112,6 +112,13 @@ export function Prompt(props: PromptProps) {
   const [auto, setAuto] = createSignal<AutocompleteRef>()
   const currentProviderLabel = createMemo(() => local.model.parsed().provider)
   const hasRightContent = createMemo(() => Boolean(props.right))
+  const queuedCount = createMemo(() => {
+    if (!props.sessionID) return 0
+    const messages = sync.data.message[props.sessionID] ?? []
+    const pending = messages.findLast((message) => message.role === "assistant" && !message.time.completed)?.id
+    if (!pending) return 0
+    return messages.filter((message) => message.role === "user" && message.id > pending).length
+  })
 
   function promptModelWarning() {
     toast.show({
@@ -649,6 +656,7 @@ export function Prompt(props: PromptProps) {
       void promptModelWarning()
       return false
     }
+    const queueing = status().type !== "idle"
 
     const workspaceSession = props.sessionID ? sync.session.get(props.sessionID) : undefined
     const workspaceID = workspaceSession?.workspaceID
@@ -794,6 +802,13 @@ export function Prompt(props: PromptProps) {
     })
     setStore("extmarkToPartIndex", new Map())
     props.onSubmit?.()
+    if (queueing) {
+      toast.show({
+        variant: "info",
+        message: "Queued after current task",
+        duration: 2000,
+      })
+    }
 
     // temporary hack to make sure the message is sent
     if (!props.sessionID)
@@ -1327,6 +1342,10 @@ export function Prompt(props: PromptProps) {
                 <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
                   {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
                 </span>
+              </text>
+              <text fg={theme.text}>
+                {keybind.print("input_submit")}{" "}
+                <span style={{ fg: theme.textMuted }}>{queuedCount() > 0 ? `${queuedCount()} queued` : "queue next"}</span>
               </text>
             </box>
           </Show>

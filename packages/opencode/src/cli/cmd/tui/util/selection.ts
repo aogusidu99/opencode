@@ -10,11 +10,17 @@ type Renderer = {
   clearSelection: () => void
 }
 
-export function copy(renderer: Renderer, toast: Toast): boolean {
-  const text = renderer.getSelection()?.getSelectedText()
-  if (!text) return false
+export function text(renderer: Renderer): string | undefined {
+  const value = renderer.getSelection()?.getSelectedText()
+  if (!value?.trim()) return undefined
+  return value
+}
 
-  Clipboard.copy(text)
+export function copy(renderer: Renderer, toast: Toast): boolean {
+  const value = text(renderer)
+  if (!value) return false
+
+  Clipboard.copy(value)
     .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
     .catch(toast.error)
 

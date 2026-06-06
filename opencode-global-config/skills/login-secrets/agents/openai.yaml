@@ -1,0 +1,7 @@
+interface:
+  display_name: "Login & Secrets"
+  short_description: "Use credentials safely."
+  default_prompt: "Use $login-secrets when a task needs account login, API keys, OAuth authorization, cloud credentials, or secret handling."
+
+policy:
+  allow_implicit_invocation: true

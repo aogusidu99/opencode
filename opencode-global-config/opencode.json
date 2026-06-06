@@ -14,12 +14,42 @@
       ".git/**": "deny"
     },
     "read": "allow",
-    "external_directory": "allow"
+    "glob": "allow",
+    "grep": "allow",
+    "list": "allow",
+    "task": "allow",
+    "webfetch": "allow",
+    "websearch": "allow",
+    "external_directory": "allow",
+    "bash": {
+      "*": "allow",
+      "rm -rf*": "ask",
+      "rm -fr*": "ask",
+      "rm -r -f*": "ask",
+      "rm -f -r*": "ask",
+      "*rm*recurse*force*": "ask",
+      "*remove-item*recurse*force*": "ask",
+      "sudo": "ask",
+      "sudo *": "ask",
+      "npm publish*": "ask",
+      "docker push*": "ask",
+      "*deploy*": "ask",
+      "*prod*": "ask",
+      "aws": "ask",
+      "aws *": "ask",
+      "vercel": "ask",
+      "vercel *": "ask"
+    }
   },
   "mcp": {
+    "puppeteer": {
+      "type": "local",
+      "command": ["npx.cmd", "-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": true
+    },
     "gdrive": {
       "type": "local",
-      "command": ["npx", "-y", "@hachiai/mcp-google-drive"],
+      "command": ["npx.cmd", "-y", "@hachiai/mcp-google-drive"],
       "enabled": true,
       "environment": {
         "GOOGLE_DRIVE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
@@ -28,7 +58,7 @@
     },
     "gmail": {
       "type": "local",
-      "command": ["npx", "-y", "@gongrzhe/server-gmail-autoauth-mcp"],
+      "command": ["npx.cmd", "-y", "@gongrzhe/server-gmail-autoauth-mcp"],
       "enabled": true,
       "environment": {
         "GMAIL_OAUTH_PATH": "C:\\Users\\aogus\\.gmail-mcp\\gcp-oauth.keys.json",
@@ -37,11 +67,11 @@
     },
     "gcalendar": {
       "type": "local",
-      "command": ["npx", "-y", "@cocal/google-calendar-mcp"],
+      "command": ["npx.cmd", "-y", "@cocal/google-calendar-mcp"],
       "enabled": true,
       "environment": {
         "GOOGLE_OAUTH_CREDENTIALS": "C:\\Users\\aogus\\.config\\mcp-google-drive\\gcp-oauth.keys.json",
-        "GOOGLE_CALENDAR_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-google-drive\\tokens.json"
+        "GOOGLE_CALENDAR_MCP_TOKEN_PATH": "C:\\Users\\aogus\\.config\\mcp-gcalendar\\tokens.json"
       }
     },
     "gemini-search": {
