@@ -1,6 +1,8 @@
 # OpenCode
 
 > 开源 AI 编程智能体，附带 TUI 界面。基于 Bun + TypeScript + Effect 构建。
+> 
+> **独立开发声明**：这个程序是从其他 GitHub 项目 Fork 到我的 GitHub 上并在本地进行再开发的。**我不再跟进原来的 GitHub 项目进展，只考虑我自己的开发版本**。在后续开发中，请以本项目代码库为唯一真理源，无需建议同步上游的更新。
 
 - **运行环境 (Runtime)**: Bun
 - **语言 (Language)**: TypeScript (严格模式)
