@@ -32,7 +32,8 @@
 - 除高危或生产相关命令外，其他 bash/shell 命令默认直接运行。
 - 每次都必须手动确认：`rm -rf` / `rm -fr` / PowerShell `Remove-Item -Recurse -Force` 等高危递归删除，尤其是项目根目录以外或 `.git` 目录相关删除。
 - 每次都必须手动确认：任何 `sudo` 命令。
-- 每次都必须手动确认：生产环境部署与发布命令，例如 `git push origin main`、`npm publish`、`docker push`。
+- 当用户要求“提交代码”“提交并合并”“提交代码并推送”等 git 交付动作时，默认包含 `git push` 到当前或目标远端分支，无需再次确认。
+- 每次都必须手动确认：生产环境部署与发布命令，例如 `npm publish`、`docker push`。
 - 每次都必须手动确认：任何命令文本中包含 `deploy`、`prod`，或涉及云端/生产凭据的命令，例如 `aws`、`vercel`。
 - 以下工具默认允许：`glob`、`grep`、`list`、`task`、`webfetch`、`websearch`、文件读写（`read`、`edit`、`write`）。
 - 全局禁止编辑/写入：`.env*` 文件、`.git/` 目录、lock 文件（`*lock*`、`pnpm-lock.yaml`）。
