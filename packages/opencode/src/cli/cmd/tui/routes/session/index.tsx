@@ -14,6 +14,9 @@ import {
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import path from "path"
+import { execFile, spawn } from "child_process"
+import { fileURLToPath } from "url"
+import open from "open"
 import { useRoute, useRouteData } from "@tui/context/route"
 import { useProject } from "@tui/context/project"
 import { useSync } from "@tui/context/sync"
@@ -94,6 +97,234 @@ addDefaultParsers(parsers.parsers)
 const GO_UPSELL_LAST_SEEN_AT = "go_upsell_last_seen_at"
 const GO_UPSELL_DONT_SHOW = "go_upsell_dont_show"
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
+const OPENABLE_EXTENSIONS =
+  "pdf|docx?|xlsx?|pptx?|csv|tsv|txt|md|markdown|rtf|jsonc?|ya?ml|xml|html?|css|scss|tsx?|jsx?|mjs|cjs|py|ipynb|sql|ps1|sh|bat|cmd|log|png|jpe?g|gif|webp|svg|zip"
+const URL_PATTERN = /\b(?:https?:\/\/|www\.)[^\s<>"'`*]+/gi
+const LOCAL_FILE_PATTERN = new RegExp(
+  `(?:(?:[A-Za-z]:|~|\\.{1,2})[\\\\/][^\\n\\r<>|"']+?|(?:[\\w.@()[\\]-]+[\\\\/])+[\\w.@()[\\]-]+?)\\.(?:${OPENABLE_EXTENSIONS})(?::\\d+(?::\\d+)?)?`,
+  "gi",
+)
+
+type OpenableReference = {
+  kind: "url" | "file"
+  label: string
+  target: string
+}
+
+type ChromiumBrowser = {
+  executable: string
+  userDataDir: string
+}
+
+type ChromiumLocalState = {
+  profile?: {
+    last_used?: string
+    info_cache?: Record<string, unknown>
+  }
+}
+
+function trimReference(value: string) {
+  return value
+    .trim()
+    .replace(/^[`'"]+/, "")
+    .replace(/(?:\*\*|__)+$/g, "")
+    .replace(/[\])}`'".,;!?]+$/g, "")
+}
+
+function stripLineSuffix(value: string) {
+  const match = value.match(new RegExp(`^(.+\\.(?:${OPENABLE_EXTENSIONS})):\\d+(?::\\d+)?$`, "i"))
+  return match?.[1] ?? value
+}
+
+function resolveLocalPath(value: string) {
+  const cleaned = stripLineSuffix(trimReference(value))
+  if (cleaned.startsWith("file://")) return fileURLToPath(cleaned)
+  const home = process.env.USERPROFILE ?? process.env.HOME ?? ""
+  const expanded = cleaned.startsWith("~/") || cleaned.startsWith("~\\") ? path.join(home, cleaned.slice(2)) : cleaned
+  if (path.isAbsolute(expanded)) return expanded
+  return path.resolve(process.cwd(), expanded)
+}
+
+function isInsideUrl(text: string, index: number) {
+  return /(?:https?:\/\/|www\.)\S*$/i.test(text.slice(Math.max(0, index - 120), index))
+}
+
+function dedupeReferences(items: OpenableReference[]) {
+  const seen = new Set<string>()
+  return items.filter((item) => {
+    const key = `${item.kind}:${item.target}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function openableReferences(text: string, files: Part[] = []) {
+  const refs: OpenableReference[] = []
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const label = trimReference(match[0])
+    refs.push({
+      kind: "url",
+      label,
+      target: label.startsWith("www.") ? `https://${label}` : label,
+    })
+  }
+  for (const match of text.matchAll(LOCAL_FILE_PATTERN)) {
+    if (isInsideUrl(text, match.index ?? 0)) continue
+    const label = trimReference(match[0])
+    if (label.includes("://") || /^www\./i.test(label)) continue
+    refs.push({
+      kind: "file",
+      label,
+      target: resolveLocalPath(label),
+    })
+  }
+  for (const file of files) {
+    if (file.type !== "file" || file.source?.type !== "file" || !file.source.path) continue
+    refs.push({
+      kind: "file",
+      label: file.filename ?? file.source.path,
+      target: resolveLocalPath(file.source.path),
+    })
+  }
+  return dedupeReferences(refs).slice(0, 12)
+}
+
+function compactReferenceLabel(label: string) {
+  if (Bun.stringWidth(label) <= 64) return label
+  return label.slice(0, 61) + "..."
+}
+
+function execFileText(file: string, args: string[]) {
+  return new Promise<string>((resolve, reject) => {
+    execFile(file, args, { windowsHide: true }, (error, stdout) => {
+      if (error) return reject(error)
+      resolve(stdout)
+    })
+  })
+}
+
+async function windowsUrlProgID() {
+  if (process.platform !== "win32") return
+  const output = await execFileText("reg", [
+    "query",
+    "HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice",
+    "/v",
+    "ProgId",
+  ]).catch(() => "")
+  return output.match(/ProgId\s+REG_SZ\s+(.+)\s*$/m)?.[1]?.trim()
+}
+
+function exeFromCommand(command: string) {
+  return command.match(/"([^"]+\.exe)"/i)?.[1] ?? command.match(/^(.+?\.exe)\b/i)?.[1]
+}
+
+async function windowsCommandForProgID(progID: string) {
+  const roots = ["HKCU\\Software\\Classes", "HKLM\\Software\\Classes", "HKCR"]
+  const outputs = await Promise.all(
+    roots.map((root) => execFileText("reg", ["query", `${root}\\${progID}\\shell\\open\\command`, "/ve"]).catch(() => "")),
+  )
+  return outputs
+    .flatMap((output) => output.split(/\r?\n/))
+    .find((line) => line.includes("REG_SZ"))
+    ?.replace(/^.*REG_SZ\s+/, "")
+    .trim()
+}
+
+function envPath(base: string | undefined, ...parts: string[]) {
+  return base ? path.join(base, ...parts) : undefined
+}
+
+async function firstExistingPath(candidates: (string | undefined)[]) {
+  const existing = await Promise.all(
+    candidates.filter((candidate): candidate is string => Boolean(candidate)).map(async (candidate) => ({
+      candidate,
+      exists: await Bun.file(candidate).exists(),
+    })),
+  )
+  return existing.find((candidate) => candidate.exists)?.candidate
+}
+
+async function chromiumProfile(userDataDir: string) {
+  const state = (await Bun.file(path.join(userDataDir, "Local State")).json().catch(() => undefined)) as
+    | ChromiumLocalState
+    | undefined
+  const profiles = state?.profile?.info_cache ?? {}
+  return (
+    state?.profile?.last_used ??
+    (profiles.Default ? "Default" : Object.keys(profiles).find((profile) => profile !== "System Profile")) ??
+    "Default"
+  )
+}
+
+async function windowsDefaultChromiumBrowser(): Promise<ChromiumBrowser | undefined> {
+  const progID = await windowsUrlProgID()
+  if (!progID) return
+  const localAppData = process.env.LOCALAPPDATA
+  const programFiles = process.env.PROGRAMFILES ?? process.env.ProgramFiles
+  const programFilesX86 = process.env["PROGRAMFILES(X86)"] ?? process.env["ProgramFiles(x86)"]
+  const commandExecutable = exeFromCommand((await windowsCommandForProgID(progID)) ?? "")
+  const lower = progID.toLowerCase()
+
+  if (lower.includes("chrome")) {
+    const userDataDir = envPath(localAppData, "Google", "Chrome", "User Data")
+    const executable =
+      commandExecutable ??
+      (await firstExistingPath([
+        envPath(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
+        envPath(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+        envPath(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
+      ]))
+    if (executable && userDataDir) return { executable, userDataDir }
+  }
+
+  if (lower.includes("msedge") || lower.includes("edge")) {
+    const userDataDir = envPath(localAppData, "Microsoft", "Edge", "User Data")
+    const executable =
+      commandExecutable ??
+      (await firstExistingPath([
+        envPath(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+        envPath(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+        envPath(localAppData, "Microsoft", "Edge", "Application", "msedge.exe"),
+      ]))
+    if (executable && userDataDir) return { executable, userDataDir }
+  }
+
+  if (lower.includes("brave")) {
+    const userDataDir = envPath(localAppData, "BraveSoftware", "Brave-Browser", "User Data")
+    const executable =
+      commandExecutable ??
+      (await firstExistingPath([
+        envPath(programFiles, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+        envPath(programFilesX86, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+        envPath(localAppData, "BraveSoftware", "Brave-Browser", "Application", "brave.exe"),
+      ]))
+    if (executable && userDataDir) return { executable, userDataDir }
+  }
+}
+
+async function openUrl(target: string) {
+  const browser = await windowsDefaultChromiumBrowser()
+  if (!browser) return open(target)
+  const profile = await chromiumProfile(browser.userDataDir)
+  const child = spawn(browser.executable, [profile ? `--profile-directory=${profile}` : "", target].filter(Boolean), {
+    detached: true,
+    stdio: "ignore",
+    windowsHide: true,
+  })
+  child.unref()
+}
+
+function openReference(target: string, toast: ReturnType<typeof useToast>) {
+  const task = /^https?:\/\//i.test(target) ? openUrl(target) : open(target)
+  task.catch(() =>
+    toast.show({
+      message: "Could not open item",
+      variant: "error",
+      duration: 3000,
+    }),
+  )
+}
 
 const context = createContext<{
   width: number
@@ -1271,6 +1502,32 @@ const MIME_BADGE: Record<string, string> = {
   "application/x-directory": "dir",
 }
 
+function OpenableReferences(props: { text: string; files?: Part[] }) {
+  const { theme } = useTheme()
+  const toast = useToast()
+  const refs = createMemo(() => openableReferences(props.text, props.files ?? []))
+  return (
+    <Show when={refs().length > 0}>
+      <box flexDirection="row" flexWrap="wrap" gap={1} paddingTop={1}>
+        <For each={refs()}>
+          {(ref) => (
+            <text
+              fg={theme.primary}
+              onMouseUp={(event) => {
+                event.stopPropagation()
+                openReference(ref.target, toast)
+              }}
+            >
+              <span style={{ bg: theme.backgroundElement, fg: theme.primary }}> {ref.kind} </span>
+              <span style={{ bg: theme.backgroundElement, fg: theme.text }}> {compactReferenceLabel(ref.label)} </span>
+            </text>
+          )}
+        </For>
+      </box>
+    </Show>
+  )
+}
+
 function UserMessage(props: {
   message: UserMessage
   parts: Part[]
@@ -1285,6 +1542,7 @@ function UserMessage(props: {
   const text = createMemo(() => props.parts.flatMap((x) => (x.type === "text" && !x.synthetic ? [x] : []))[0])
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const { theme } = useTheme()
+  const toast = useToast()
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending && props.message.id > props.pending)
   const color = createMemo(() => local.agent.color(props.message.agent))
@@ -1342,6 +1600,7 @@ function UserMessage(props: {
                 backgroundColor={hover() ? theme.backgroundElement : undefined}
               >
                 <text fg={theme.text}>{text()?.text}</text>
+                <OpenableReferences text={text()?.text ?? ""} />
                 <Show when={files().length}>
                   <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                   <For each={files()}>
@@ -1351,8 +1610,20 @@ function UserMessage(props: {
                         if (file.mime === "application/pdf") return theme.primary
                         return theme.secondary
                       })
+                      const target = createMemo(() => {
+                        if (file.source?.type !== "file" || !file.source.path) return
+                        return resolveLocalPath(file.source.path)
+                      })
                       return (
-                        <text fg={theme.text}>
+                        <text
+                          fg={theme.text}
+                          onMouseUp={(event) => {
+                            const fileTarget = target()
+                            if (!fileTarget) return
+                            event.stopPropagation()
+                            openReference(fileTarget, toast)
+                          }}
+                        >
                           <span style={{ bg: bg(), fg: theme.background }}> {MIME_BADGE[file.mime] ?? file.mime} </span>
                           <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
                         </text>
@@ -1568,6 +1839,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
             />
           </Match>
         </Switch>
+        <OpenableReferences text={props.part.text} />
       </box>
     </Show>
   )

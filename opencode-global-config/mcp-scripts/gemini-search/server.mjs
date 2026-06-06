@@ -39,6 +39,23 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey })
 
+function responseText(response) {
+  if (typeof response.text === "function") return response.text()
+  return response.text ?? ""
+}
+
+function toolError(error) {
+  return {
+    isError: true,
+    content: [
+      {
+        type: "text",
+        text: `Gemini Search 调用失败：${error instanceof Error ? error.message : String(error)}`,
+      },
+    ],
+  }
+}
+
 // 创建 MCP Server
 const server = new McpServer({
   name: "gemini-search",
@@ -51,29 +68,35 @@ server.tool(
   "使用 Google Search 进行实时网络搜索，返回最新信息和引用来源。适用于查询近期新闻、最新文档、实时数据等。",
   { query: z.string().describe("搜索关键词或问题，支持中英文") },
   async ({ query }) => {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: query,
-      // 启用 Google Search Grounding：让 Gemini 实时搜索网络
-      tools: [{ googleSearch: {} }],
-    })
-
-    const text = response.text()
-
-    // 提取引用来源
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
-    const sources = chunks
-      .filter((c) => c.web?.uri)
-      .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`)
-      .join("\n")
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: sources ? `${text}\n\n**参考来源:**\n${sources}` : text,
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: query,
+        config: {
+          // 启用 Google Search Grounding：让 Gemini 实时搜索网络
+          tools: [{ googleSearch: {} }],
         },
-      ],
+      })
+
+      const text = responseText(response)
+
+      // 提取引用来源
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
+      const sources = chunks
+        .filter((c) => c.web?.uri)
+        .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`)
+        .join("\n")
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: sources ? `${text}\n\n**参考来源:**\n${sources}` : text,
+          },
+        ],
+      }
+    } catch (error) {
+      return toolError(error)
     }
   },
 )
@@ -87,34 +110,38 @@ server.tool(
     depth: z.enum(["brief", "detailed"]).optional().describe("研究深度：brief（快速）或 detailed（详细，默认）"),
   },
   async ({ topic, depth = "detailed" }) => {
-    const prompt =
-      depth === "detailed"
-        ? `请对以下主题进行深度研究和综合分析，搜索最新信息，给出详细的报告（包括现状、趋势、优缺点对比、实践建议）：\n\n${topic}`
-        : `请简要搜索并总结以下主题的最新信息：\n\n${topic}`
+    try {
+      const prompt =
+        depth === "detailed"
+          ? `请对以下主题进行深度研究和综合分析，搜索最新信息，给出详细的报告（包括现状、趋势、优缺点对比、实践建议）：\n\n${topic}`
+          : `请简要搜索并总结以下主题的最新信息：\n\n${topic}`
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: prompt,
-      tools: [{ googleSearch: {} }],
-      generationConfig: {
-        temperature: 0.3, // 降低随机性，确保研究报告的准确性
-      },
-    })
-
-    const text = response.text()
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
-    const sources = chunks
-      .filter((c) => c.web?.uri)
-      .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`)
-      .join("\n")
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: sources ? `${text}\n\n**参考来源 (${chunks.length} 个):**\n${sources}` : text,
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          temperature: 0.3,
         },
-      ],
+      })
+
+      const text = responseText(response)
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
+      const sources = chunks
+        .filter((c) => c.web?.uri)
+        .map((c) => `- [${c.web.title || c.web.uri}](${c.web.uri})`)
+        .join("\n")
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: sources ? `${text}\n\n**参考来源 (${chunks.length} 个):**\n${sources}` : text,
+          },
+        ],
+      }
+    } catch (error) {
+      return toolError(error)
     }
   },
 )

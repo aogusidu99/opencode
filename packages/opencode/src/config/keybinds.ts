@@ -49,6 +49,7 @@ const KeybindsSchema = Schema.Struct({
   messages_previous: keybind("none", "Navigate to previous message"),
   messages_last_user: keybind("none", "Navigate to last user message"),
   messages_copy: keybind("<leader>y", "Copy message"),
+  selection_followup: keybind("ctrl+alt+s", "Ask about selected message text"),
   messages_undo: keybind("<leader>u", "Undo message"),
   messages_redo: keybind("<leader>r", "Redo message"),
   messages_toggle_conceal: keybind("<leader>h", "Toggle code block concealment in messages"),

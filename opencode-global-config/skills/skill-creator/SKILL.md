@@ -34,12 +34,15 @@ description: 从对话历史、重复工作流、仓库流程、MCP/tool 集成�
 
 ### 2. 选择目录和兼容范围
 根据用户意图选择目标位置：
-- **审阅草稿**：优先放在当前仓库，例如 `opencode-global-config/skills/<skill-name>/SKILL.md`。
-- **OpenCode 全局**：放在 `opencode-global-config/skills/<skill-name>/SKILL.md`，因为该目录用于同步个人全局配置。
+- **审阅草稿**：优先放在当前 workspace，例如 `skills/<skill-name>/SKILL.md` 或项目约定的草稿目录。
+- **Harness Universal A 类共享 skill**：放在 `D:/Code/Harness Universal/skills/<skill-name>/SKILL.md`。当前共享源只用于可跨 agent 同源维护的 skill，例如 `skill-creator`。
+- **OpenCode 全局 entity skill**：放在定制版 `D:/Code/opencode/opencode-global-config/skills/<skill-name>/SKILL.md`（权威源）；运行时部署到 `~/.config/opencode/skills/` 由用户自行同步。
 - **OpenCode 项目级**：放在当前项目 `.opencode/skills/<skill-name>/SKILL.md`。
 - **Codex 全局**：放在 `$CODEX_HOME/skills/<skill-name>/SKILL.md`；如果没有 `CODEX_HOME`，使用 `%USERPROFILE%\.codex\skills\<skill-name>\SKILL.md`。
 
 写入当前工作区外的 Codex 全局目录前，先向用户确认，除非用户已经明确要求“安装到全局”。
+
+如果 skill 属于 backup/restore、agent 专属登录或系统能力，按 B 类 entity skill 处理，保留在目标 agent 自己的 skills 目录中，不放入 `D:/Code/Harness Universal/skills/` 作为共享源。
 
 为了兼容 Codex、OpenCode 和 Anthropic 风格 of Agent Skills，默认只使用这两个 frontmatter 字段。description 可以保留少量英文关键词，但正文说明应中文优先：
 ```yaml

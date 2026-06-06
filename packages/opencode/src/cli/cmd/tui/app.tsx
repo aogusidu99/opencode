@@ -220,6 +220,32 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   const sync = useSync()
   const exit = useExit()
   const promptRef = usePromptRef()
+  const [lastSelectionText, setLastSelectionText] = createSignal("")
+  const currentSelectionText = () => Selection.text(renderer) ?? lastSelectionText()
+  const rememberSelection = () => {
+    const value = Selection.text(renderer)
+    if (!value) return false
+    setLastSelectionText(value)
+    return true
+  }
+  const copySelection = () => {
+    const value = Selection.text(renderer)
+    if (value) setLastSelectionText(value)
+    return Selection.copy(renderer, toast)
+  }
+  const handleSelectionMouseUp = () => {
+    if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) {
+      rememberSelection()
+      return
+    }
+    copySelection()
+  }
+  const quoteSelection = (value: string) =>
+    value
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => `> ${line}`)
+      .join("\n")
   const routes: RouteMap = new Map()
   const [routeRev, setRouteRev] = createSignal(0)
   const routeView = (name: string) => {
@@ -259,13 +285,14 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
     const sel = renderer.getSelection()
     if (!sel) return
+    rememberSelection()
 
     // Windows Terminal-like behavior:
     // - Ctrl+C copies and dismisses selection
     // - Esc dismisses selection
     // - Most other key input dismisses selection and is passed through
     if (evt.ctrl && evt.name === "c") {
-      if (!Selection.copy(renderer, toast)) {
+      if (!copySelection()) {
         renderer.clearSelection()
         return
       }
@@ -294,6 +321,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
   renderer.console.onCopySelection = async (text: string) => {
     if (!text || text.length === 0) return
 
+    setLastSelectionText(text)
     await Clipboard.copy(text)
       .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
       .catch(toast.error)
@@ -431,6 +459,47 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         route.navigate({
           type: "home",
         })
+        dialog.clear()
+      },
+    },
+    {
+      title: "Ask about selection",
+      value: "selection.followup",
+      keybind: "selection_followup",
+      category: "Prompt",
+      suggested: !!currentSelectionText(),
+      onSelect: (dialog) => {
+        const selection = currentSelectionText()?.trim()
+        if (!selection) {
+          toast.show({
+            variant: "warning",
+            message: "Select message text first",
+            duration: 3000,
+          })
+          dialog.clear()
+          return
+        }
+        const prompt = promptRef.current
+        if (!prompt) {
+          toast.show({
+            variant: "warning",
+            message: "Prompt is not ready",
+            duration: 3000,
+          })
+          dialog.clear()
+          return
+        }
+
+        const existing = prompt.current.input.trim()
+        prompt.set({
+          input: existing
+            ? `${existing}\n\nSelected text:\n${quoteSelection(selection)}\n\n`
+            : `Follow up on the selected text:\n\n${quoteSelection(selection)}\n\n`,
+          parts: prompt.current.parts,
+        })
+        prompt.focus()
+        setLastSelectionText(selection)
+        renderer.clearSelection()
         dialog.clear()
       },
     },
@@ -894,11 +963,11 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         if (!Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
 
-        if (!Selection.copy(renderer, toast)) return
+        if (!copySelection()) return
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      onMouseUp={Flag.OPENCODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
+      onMouseUp={handleSelectionMouseUp}
     >
       <Show when={Flag.OPENCODE_SHOW_TTFD}>
         <TimeToFirstDraw />
