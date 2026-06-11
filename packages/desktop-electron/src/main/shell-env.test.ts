@@ -34,6 +34,12 @@ describe("shell env", () => {
     expect(env.OPENCODE_CLIENT).toBe("desktop")
   })
 
+  test("mergeShellEnv ignores undefined process values", () => {
+    const env = mergeShellEnv({ HTTPS_PROXY: "http://proxy.local:8080" }, { HTTPS_PROXY: undefined })
+
+    expect(env.HTTPS_PROXY).toBe("http://proxy.local:8080")
+  })
+
   test("isNushell handles path and binary name", () => {
     expect(isNushell("nu")).toBe(true)
     expect(isNushell("/opt/homebrew/bin/nu")).toBe(true)

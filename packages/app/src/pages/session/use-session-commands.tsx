@@ -24,6 +24,8 @@ export type SessionCommandContext = {
   navigateMessageByOffset: (offset: number) => void
   setActiveMessage: (message: UserMessage | undefined) => void
   focusInput: () => void
+  collapseAllAnswers: () => void
+  expandAllAnswers: () => void
   review?: () => boolean
 }
 
@@ -116,6 +118,8 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
   const navigateMessageByOffset = actions.navigateMessageByOffset
   const setActiveMessage = actions.setActiveMessage
   const focusInput = actions.focusInput
+  const collapseAllAnswers = actions.collapseAllAnswers
+  const expandAllAnswers = actions.expandAllAnswers
 
   const sessionCommand = withCategory(language.t("command.category.session"))
   const fileCommand = withCategory(language.t("command.category.file"))
@@ -509,6 +513,22 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       keybind: "mod+alt+]",
       disabled: !params.id,
       onSelect: () => navigateMessageByOffset(1),
+    }),
+    sessionCommand({
+      id: "message.answers.collapseAll",
+      title: language.t("command.message.answers.collapseAll"),
+      description: language.t("command.message.answers.collapseAll.description"),
+      slash: "collapse-all",
+      disabled: !params.id || visibleUserMessages().length === 0,
+      onSelect: collapseAllAnswers,
+    }),
+    sessionCommand({
+      id: "message.answers.expandAll",
+      title: language.t("command.message.answers.expandAll"),
+      description: language.t("command.message.answers.expandAll.description"),
+      slash: "expand-all",
+      disabled: !params.id || visibleUserMessages().length === 0,
+      onSelect: expandAllAnswers,
     }),
   ]
 

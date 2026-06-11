@@ -80,9 +80,55 @@ export function loadShellEnv(shell: string) {
   return null
 }
 
-export function mergeShellEnv(shell: Record<string, string> | null, env: Record<string, string>) {
+export function loadWindowsPersistentEnv() {
+  if (process.platform !== "win32") return null
+
+  const script = `
+$machine = [Environment]::GetEnvironmentVariables('Machine')
+$user = [Environment]::GetEnvironmentVariables('User')
+$result = @{}
+foreach ($key in $machine.Keys) { $result[$key] = [string]$machine[$key] }
+foreach ($key in $user.Keys) { $result[$key] = [string]$user[$key] }
+$result | ConvertTo-Json -Compress
+`
+  const out = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], {
+    stdio: ["ignore", "pipe", "ignore"],
+    timeout: TIMEOUT,
+    windowsHide: true,
+  })
+
+  const err = out.error as NodeJS.ErrnoException | undefined
+  if (err) {
+    if (err.code === "ETIMEDOUT") console.warn("[server] Windows environment probe timed out")
+    else console.log(`[server] Windows environment probe failed: ${err.message}`)
+    return null
+  }
+
+  if (out.status !== 0) {
+    console.log("[server] Windows environment probe exited with non-zero status")
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(out.stdout.toString("utf8"))
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+        .filter(([key]) => key.length > 0),
+    )
+  } catch {
+    console.log("[server] Windows environment probe returned invalid JSON")
+    return null
+  }
+}
+
+export function mergeShellEnv(shell: Record<string, string> | null, env: Record<string, string | undefined>) {
+  const defined = Object.fromEntries(
+    Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+  )
   return {
     ...shell,
-    ...env,
+    ...defined,
   }
 }

@@ -20,7 +20,7 @@ import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { useLocal } from "@/context/local"
 import { selectionFromLines, useFile, type FileSelection, type SelectedLineRange } from "@/context/file"
-import { createStore } from "solid-js/store"
+import { createStore, reconcile } from "solid-js/store"
 import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
 import { Select } from "@opencode-ai/ui/select"
 import { Tabs } from "@opencode-ai/ui/tabs"
@@ -1007,6 +1007,9 @@ export default function Page() {
     pendingDiff: undefined as string | undefined,
     activeDiff: undefined as string | undefined,
   })
+  const [answerCollapse, setAnswerCollapse] = createStore({
+    collapsed: {} as Record<string, boolean | undefined>,
+  })
 
   createEffect(
     on(
@@ -1031,11 +1034,38 @@ export default function Page() {
     if (isChildSession()) return
     inputRef?.focus()
   }
+  const isAnswerCollapsed = (messageID: string) => !!answerCollapse.collapsed[messageID]
+  const setAnswerCollapsed = (messageID: string, collapsed: boolean) => {
+    setAnswerCollapse("collapsed", messageID, collapsed ? true : undefined)
+  }
+  const visibleAnswerCount = createMemo(() => visibleUserMessages().length)
+  const allAnswersCollapsed = createMemo(() => {
+    const messages = visibleUserMessages()
+    return messages.length > 0 && messages.every((message) => isAnswerCollapsed(message.id))
+  })
+  const toggleAllAnswersCollapsed = () => {
+    if (allAnswersCollapsed()) {
+      expandAllAnswers()
+      return
+    }
+    collapseAllAnswers()
+  }
+  const collapseAllAnswers = () => {
+    setAnswerCollapse(
+      "collapsed",
+      reconcile(Object.fromEntries(visibleUserMessages().map((message) => [message.id, true]))),
+    )
+  }
+  const expandAllAnswers = () => {
+    setAnswerCollapse("collapsed", reconcile({}))
+  }
 
   useSessionCommands({
     navigateMessageByOffset,
     setActiveMessage,
     focusInput,
+    collapseAllAnswers,
+    expandAllAnswers,
     review: reviewTab,
   })
 
@@ -1876,6 +1906,13 @@ export default function Page() {
                     }}
                     renderedUserMessages={historyWindow.renderedUserMessages()}
                     anchor={anchor}
+                    answerCollapse={{
+                      collapsed: isAnswerCollapsed,
+                      setCollapsed: setAnswerCollapsed,
+                      hasAnswers: () => visibleAnswerCount() > 0,
+                      allCollapsed: allAnswersCollapsed,
+                      toggleAll: toggleAllAnswersCollapsed,
+                    }}
                   />
                 </Show>
               </Match>

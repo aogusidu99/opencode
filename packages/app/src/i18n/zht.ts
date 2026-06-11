@@ -562,6 +562,8 @@ export const dict = {
   "session.share.action.view": "檢視",
   "session.share.copy.copied": "已複製",
   "session.share.copy.copyLink": "複製連結",
+  "session.answers.collapseAll": "全部折疊",
+  "session.answers.expandAll": "全部展開",
 
   "lsp.tooltip.none": "沒有 LSP 伺服器",
   "lsp.label.connected": "{{count}} LSP",
