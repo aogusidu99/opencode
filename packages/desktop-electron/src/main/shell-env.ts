@@ -125,7 +125,9 @@ $result | ConvertTo-Json -Compress
 
 export function mergeShellEnv(shell: Record<string, string> | null, env: Record<string, string | undefined>) {
   const defined = Object.fromEntries(
-    Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    // 空字符串视为"未设置":不让 process.env 里的空值覆盖 shell/持久环境探测到的有效值。
+    // 典型场景:某些终端把 https_proxy 设为空串,会顶掉真正的代理,导致 GUI 应用直连外网失败。
+    Object.entries(env).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== ""),
   )
   return {
     ...shell,

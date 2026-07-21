@@ -493,6 +493,8 @@ export const dict = {
   "error.server.invalidConfiguration": "Invalid configuration",
   "error.chain.causedBy": "Caused by:",
   "error.chain.apiError": "API error",
+  "error.chain.networkUnreachable": "Can't reach the provider — check your network or proxy settings.",
+  "error.chain.authRequired": "Authentication failed — check the provider's API key or sign-in.",
   "error.chain.status": "Status: {{status}}",
   "error.chain.retryable": "Retryable: {{retryable}}",
   "error.chain.responseBody": "Response body:\n{{body}}",
@@ -691,6 +693,7 @@ export const dict = {
   "sidebar.empty.description": "Open a project to get started",
 
   "debugBar.ariaLabel": "Development performance diagnostics",
+  "debugBar.hide": "Hide (Alt+Shift+D)",
   "debugBar.na": "n/a",
   "debugBar.nav.label": "NAV",
   "debugBar.nav.tip":

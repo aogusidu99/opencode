@@ -6,6 +6,7 @@ import { createStore } from "solid-js/store"
 import { usePlatform } from "@/context/platform"
 import { useLanguage } from "@/context/language"
 import { Icon } from "@opencode-ai/ui/icon"
+import { readableConnectionError } from "@/utils/server-errors"
 
 export type InitError = {
   name: string
@@ -67,7 +68,13 @@ function formatInitError(error: InitError, t: Translator): string {
     }
     case "APIError": {
       const message = typeof data.message === "string" ? data.message : t("error.chain.apiError")
-      const lines: string[] = [message]
+      const statusCode = typeof data.statusCode === "number" ? data.statusCode : undefined
+      // 先给出清晰、可操作的原因(网络/代理不可达 或 需认证),再附原始错误细节
+      const readable = readableConnectionError(
+        { message: typeof data.message === "string" ? data.message : undefined, statusCode },
+        t,
+      )
+      const lines: string[] = readable ? [readable, message] : [message]
 
       if (typeof data.statusCode === "number") {
         lines.push(t("error.chain.status", { status: data.statusCode }))
