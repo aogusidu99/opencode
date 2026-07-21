@@ -77,16 +77,20 @@ function prepareServerEnv(password: string) {
 
 function configureProxyDispatcher() {
   try {
-    const { EnvHttpProxyAgent, setGlobalDispatcher } = require("undici")
+    const { EnvHttpProxyAgent, setGlobalDispatcher, fetch: undiciFetch } = require("undici")
     setGlobalDispatcher(new EnvHttpProxyAgent())
+    // Electron 主进程的 globalThis.fetch 基于 Chromium 网络栈,不受 undici 全局 dispatcher(代理)影响,
+    // 且对 SSE(text/event-stream)流式响应的处理与 undici 不同 —— opencode 的 FetchHttpClient 调用
+    // globalThis.fetch 请求 exa(网络搜索)这类 SSE 端点时会报 "Transport error"(经 Node 复现:同样的
+    // 请求用 undici fetch 走代理/直连都 200)。改用 undici 的 fetch,让所有出站 HTTP 统一走 undici + 上面
+    // 配置的代理 dispatcher。只影响出站请求,不涉及 opencode 的 HTTP 服务端(走 node:http)。
+    if (typeof undiciFetch === "function") {
+      globalThis.fetch = undiciFetch as typeof globalThis.fetch
+    }
     // 记录实际生效的代理来源:undici 的 EnvHttpProxyAgent 读 http_proxy/https_proxy(大小写均可)。
     // 之前无论有没有代理都打印 "configured",无法诊断"连不上"是否因为请求根本没走代理。
     const raw =
-      process.env.https_proxy ||
-      process.env.HTTPS_PROXY ||
-      process.env.http_proxy ||
-      process.env.HTTP_PROXY ||
-      ""
+      process.env.https_proxy || process.env.HTTPS_PROXY || process.env.http_proxy || process.env.HTTP_PROXY || ""
     // 代理 URL 可能含 user:pass,记录前先脱敏
     const safe = raw.replace(/(\/\/)[^/@]*@/, "$1***@")
     console.log(

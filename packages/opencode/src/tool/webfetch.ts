@@ -155,6 +155,13 @@ export const WebFetchTool = Tool.define(
 )
 
 async function extractTextFromHTML(html: string) {
+  // HTMLRewriter 是 bun / Cloudflare Workers 的全局,Node / Electron(桌面版 sidecar)里不存在,
+  // 直接 new 会抛 "HTMLRewriter is not defined" 导致 webfetch 的 text 格式在桌面版失败。
+  // 用 typeof 检测(对未声明全局安全,不会 ReferenceError),缺失时回退到纯 Node 实现。
+  if (typeof HTMLRewriter === "undefined") {
+    return extractTextFromHTMLNode(html)
+  }
+
   let text = ""
   let skipContent = false
 
@@ -184,6 +191,24 @@ async function extractTextFromHTML(html: string) {
 
   await rewriter.text()
   return text.trim()
+}
+
+// Node 回退:去掉不可见元素(连同内容)与所有标签,解码常见 HTML 实体,折叠空白。
+// 精度不及 HTMLRewriter,但足以在桌面版(Node)从网页提取可读文本。
+function extractTextFromHTMLNode(html: string): string {
+  return html
+    .replace(/<(script|style|noscript|iframe|object|embed)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(parseInt(n, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 function convertHTMLToMarkdown(html: string): string {
