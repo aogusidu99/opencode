@@ -1,6 +1,6 @@
 import { app } from "electron"
 import { DEFAULT_SERVER_URL_KEY, WSL_ENABLED_KEY } from "./constants"
-import { getUserShell, loadShellEnv } from "./shell-env"
+import { getUserShell, loadShellEnv, loadWindowsPersistentEnv, mergeShellEnv } from "./shell-env"
 import { getStore } from "./store"
 
 export type WslConfig = { enabled: boolean }
@@ -32,6 +32,7 @@ export function setWslConfig(config: WslConfig) {
 
 export async function spawnLocalServer(hostname: string, port: number, password: string) {
   prepareServerEnv(password)
+  configureProxyDispatcher()
   const { Log, Server } = await import("virtual:opencode-server")
   await Log.init({ level: "WARN" })
   const listener = await Server.listen({
@@ -58,11 +59,12 @@ export async function spawnLocalServer(hostname: string, port: number, password:
 }
 
 function prepareServerEnv(password: string) {
-  const shell = process.platform === "win32" ? null : getUserShell()
-  const shellEnv = shell ? (loadShellEnv(shell) ?? {}) : {}
+  const shellEnv = (() => {
+    if (process.platform === "win32") return loadWindowsPersistentEnv()
+    return loadShellEnv(getUserShell())
+  })()
   const env = {
-    ...process.env,
-    ...shellEnv,
+    ...mergeShellEnv(shellEnv, process.env),
     OPENCODE_EXPERIMENTAL_ICON_DISCOVERY: "true",
     OPENCODE_EXPERIMENTAL_FILEWATCHER: "true",
     OPENCODE_CLIENT: "desktop",
@@ -71,6 +73,30 @@ function prepareServerEnv(password: string) {
     XDG_STATE_HOME: app.getPath("userData"),
   }
   Object.assign(process.env, env)
+}
+
+function configureProxyDispatcher() {
+  try {
+    const { EnvHttpProxyAgent, setGlobalDispatcher } = require("undici")
+    setGlobalDispatcher(new EnvHttpProxyAgent())
+    // 记录实际生效的代理来源:undici 的 EnvHttpProxyAgent 读 http_proxy/https_proxy(大小写均可)。
+    // 之前无论有没有代理都打印 "configured",无法诊断"连不上"是否因为请求根本没走代理。
+    const raw =
+      process.env.https_proxy ||
+      process.env.HTTPS_PROXY ||
+      process.env.http_proxy ||
+      process.env.HTTP_PROXY ||
+      ""
+    // 代理 URL 可能含 user:pass,记录前先脱敏
+    const safe = raw.replace(/(\/\/)[^/@]*@/, "$1***@")
+    console.log(
+      raw
+        ? `[server] Undici proxy dispatcher configured (proxy: ${safe})`
+        : "[server] Undici proxy dispatcher configured (no proxy detected in env)",
+    )
+  } catch (err) {
+    console.warn("[server] Failed to configure undici proxy dispatcher", err)
+  }
 }
 
 export async function checkHealth(url: string, password?: string | null): Promise<boolean> {

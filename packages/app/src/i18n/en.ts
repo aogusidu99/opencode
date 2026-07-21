@@ -61,6 +61,10 @@ export const dict = {
   "command.message.previous.description": "Go to the previous user message",
   "command.message.next": "Next message",
   "command.message.next.description": "Go to the next user message",
+  "command.message.answers.collapseAll": "Collapse all responses",
+  "command.message.answers.collapseAll.description": "Collapse every response in the current session",
+  "command.message.answers.expandAll": "Expand all responses",
+  "command.message.answers.expandAll.description": "Expand every response in the current session",
   "command.model.choose": "Choose model",
   "command.model.choose.description": "Select a different model",
   "command.mcp.toggle": "Toggle MCPs",
@@ -489,6 +493,8 @@ export const dict = {
   "error.server.invalidConfiguration": "Invalid configuration",
   "error.chain.causedBy": "Caused by:",
   "error.chain.apiError": "API error",
+  "error.chain.networkUnreachable": "Can't reach the provider — check your network or proxy settings.",
+  "error.chain.authRequired": "Authentication failed — check the provider's API key or sign-in.",
   "error.chain.status": "Status: {{status}}",
   "error.chain.retryable": "Retryable: {{retryable}}",
   "error.chain.responseBody": "Response body:\n{{body}}",
@@ -620,6 +626,8 @@ export const dict = {
   "session.share.action.view": "View",
   "session.share.copy.copied": "Copied",
   "session.share.copy.copyLink": "Copy link",
+  "session.answers.collapseAll": "Collapse all",
+  "session.answers.expandAll": "Expand all",
 
   "lsp.tooltip.none": "No LSP servers",
   "lsp.label.connected": "{{count}} LSP",
@@ -685,6 +693,7 @@ export const dict = {
   "sidebar.empty.description": "Open a project to get started",
 
   "debugBar.ariaLabel": "Development performance diagnostics",
+  "debugBar.hide": "Hide (Alt+Shift+D)",
   "debugBar.na": "n/a",
   "debugBar.nav.label": "NAV",
   "debugBar.nav.tip":

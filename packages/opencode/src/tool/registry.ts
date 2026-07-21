@@ -157,9 +157,10 @@ export const layer: Layer.Layer<
         if (matches.length) yield* config.waitForDependencies()
         for (const match of matches) {
           const namespace = path.basename(match, path.extname(match))
-          const mod = yield* Effect.promise(
-            () => import(process.platform === "win32" ? match : pathToFileURL(match).href),
-          )
+          // pathToFileURL 在所有平台都正确:绝对路径必须转成 file:// URL 才能被 Node ESM import。
+          // 原三元判断写反了(Windows 用裸 `D:\...` 路径 → "Received protocol 'd:'" 崩溃,导致 prompt 阶段
+          // 加载自定义工具时失败、请求永久挂起);bun 接受裸路径所以 CLI/TUI 不受影响,只有 Electron(Node)命中。
+          const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
             custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
           }

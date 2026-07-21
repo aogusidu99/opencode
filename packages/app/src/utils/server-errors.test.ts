@@ -19,6 +19,8 @@ function useLanguageMock() {
     "error.chain.modelNotFound": "Modelo nao encontrado: {{provider}}/{{model}}",
     "error.chain.didYouMean": "Voce quis dizer: {{suggestions}}",
     "error.chain.checkConfig": "Revise provider/model no config",
+    "error.chain.networkUnreachable": "Sem conexao - verifique rede/proxy",
+    "error.chain.authRequired": "Falha de autenticacao - verifique a chave",
   }
   return {
     t(key: string, vars?: Record<string, string | number>) {
@@ -126,6 +128,33 @@ describe("formatServerError", () => {
 
     expect(formatServerError(error, language.t)).toBe(
       ["Modelo nao encontrado: x/y", "Voce quis dizer: x/y2, x/y3", "Revise provider/model no config"].join("\n"),
+    )
+  })
+
+  test("classifies network failures with a clear reason + raw detail", () => {
+    expect(formatServerError(new Error("fetch failed"), language.t)).toBe(
+      ["Sem conexao - verifique rede/proxy", "fetch failed"].join("\n"),
+    )
+  })
+
+  test("classifies undici connect timeout (nested data shape)", () => {
+    const error = { name: "APIError", data: { message: "Connect Timeout Error" } }
+    expect(formatServerError(error, language.t)).toBe(
+      ["Sem conexao - verifique rede/proxy", "Connect Timeout Error"].join("\n"),
+    )
+  })
+
+  test("classifies 401 status as auth failure", () => {
+    const error = { name: "APIError", data: { message: "Unauthorized", statusCode: 401 } }
+    expect(formatServerError(error, language.t)).toBe(
+      ["Falha de autenticacao - verifique a chave", "Unauthorized"].join("\n"),
+    )
+  })
+
+  test("does not misread errors that carry an http status as network failures", () => {
+    // 有状态码 = 请求已到服务器,不属于"连不上"
+    expect(formatServerError(new Error("Request failed with status 503"), language.t)).toBe(
+      "Request failed with status 503",
     )
   })
 })

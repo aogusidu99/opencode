@@ -1,5 +1,6 @@
 import z from "zod"
 import os from "os"
+import { pathToFileURL } from "url"
 import fuzzysort from "fuzzysort"
 import { Config } from "../config"
 import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
@@ -1496,7 +1497,12 @@ const layer: Layer.Layer<
           installedPath = model.api.npm
         }
 
-        const mod = await import(installedPath)
+        // Windows + Node ESM 要求绝对路径以 file:// URL 形式 import;裸 `D:\...` 路径会被当成 "d:" 协议
+        // 报错("Only URLs with a scheme in: file, data, node, and electron ... Received protocol 'd:'"),
+        // 导致 prompt 阶段加载 provider SDK 时崩溃、请求永久挂起。bun 的 import 接受绝对路径,所以 CLI/TUI
+        // 不受影响,只有 Electron 主进程(Node)会命中。item.entrypoint 是绝对路径,file:// 分支已是 URL。
+        const specifier = installedPath.startsWith("file://") ? installedPath : pathToFileURL(installedPath).href
+        const mod = await import(specifier)
 
         const fn = mod[Object.keys(mod).find((key) => key.startsWith("create"))!]
         const loaded = fn({

@@ -229,6 +229,13 @@ export function MessageTimeline(props: {
   onLoadEarlier: () => void
   renderedUserMessages: UserMessage[]
   anchor: (id: string) => string
+  answerCollapse?: {
+    collapsed: (messageID: string) => boolean
+    setCollapsed: (messageID: string, collapsed: boolean) => void
+    hasAnswers: () => boolean
+    allCollapsed: () => boolean
+    toggleAll: () => void
+  }
 }) {
   let touchGesture: number | undefined
 
@@ -878,6 +885,16 @@ export function MessageTimeline(props: {
                                     </DropdownMenu.ItemLabel>
                                   </DropdownMenu.Item>
                                 </Show>
+                                <DropdownMenu.Item
+                                  disabled={!props.answerCollapse?.hasAnswers()}
+                                  onSelect={() => props.answerCollapse?.toggleAll()}
+                                >
+                                  <DropdownMenu.ItemLabel>
+                                    {props.answerCollapse?.allCollapsed()
+                                      ? language.t("session.answers.expandAll")
+                                      : language.t("session.answers.collapseAll")}
+                                  </DropdownMenu.ItemLabel>
+                                </DropdownMenu.Item>
                                 <DropdownMenu.Item onSelect={() => void archiveSession(id())}>
                                   <DropdownMenu.ItemLabel>{language.t("common.archive")}</DropdownMenu.ItemLabel>
                                 </DropdownMenu.Item>
@@ -1096,6 +1113,12 @@ export function MessageTimeline(props: {
                         actions={props.actions}
                         active={active()}
                         status={active() ? sessionStatus() : undefined}
+                        collapsed={props.answerCollapse?.collapsed(messageID)}
+                        onCollapseChange={
+                          props.answerCollapse
+                            ? (collapsed) => props.answerCollapse?.setCollapsed(messageID, collapsed)
+                            : undefined
+                        }
                         showReasoningSummaries={settings.general.showReasoningSummaries()}
                         shellToolDefaultOpen={settings.general.shellToolPartsExpanded()}
                         editToolDefaultOpen={settings.general.editToolPartsExpanded()}
