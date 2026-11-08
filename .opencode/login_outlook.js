@@ -1,6 +1,9 @@
 const puppeteer = require('puppeteer');
+const { loadAccount } = require('./load_account');
 
 (async () => {
+  // 账号密码从本地金库 accounts.local.json 读取，不在代码中硬编码（在启动浏览器前读取，缺失时直接退出）
+  const account = loadAccount('outlook');
   console.log('启动可视化浏览器...');
   const browser = await puppeteer.launch({
     headless: false, // 设为 false，直接打开可视化网页
@@ -15,7 +18,7 @@ const puppeteer = require('puppeteer');
   // 1. 输入邮箱
   console.log('输入账号...');
   await page.waitForSelector('input[type="email"]', { visible: true });
-  await page.type('input[type="email"]', 'aogusidu99@outlook.com', { delay: 50 });
+  await page.type('input[type="email"]', account.username, { delay: 50 });
   await page.keyboard.press('Enter');
 
   console.log('检测登录方式页面...');
@@ -50,7 +53,7 @@ const puppeteer = require('puppeteer');
   await page.waitForSelector('input[name="passwd"]', { visible: true });
   // 等待微软账号页面的切换动画完成
   await new Promise(r => setTimeout(r, 1500));
-  await page.type('input[name="passwd"]', '1Wndcbd.', { delay: 50 });
+  await page.type('input[name="passwd"]', account.password, { delay: 50 });
   await page.keyboard.press('Enter');
 
   // 3. 处理 "是否保持登录状态" (Stay signed in)
