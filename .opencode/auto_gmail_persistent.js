@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const { exec } = require('child_process');
+const { loadAccount } = require('./load_account');
 
 async function autoLoginGmail() {
   let wsUrl = '';
@@ -44,12 +45,14 @@ async function autoLoginGmail() {
     const currentUrl = page.url();
     if (currentUrl.includes('signin') || currentUrl.includes('ServiceLogin')) {
         console.log('检测到处于未登录状态，开始自动化登录流程...');
-        
+        // 账号密码从本地金库 accounts.local.json 读取，不在代码中硬编码
+        const account = loadAccount('gmail');
+
         // 尝试输入账号
         const emailInput = await page.$('input[type="email"]');
         if (emailInput) {
             console.log('输入账号...');
-            await page.type('input[type="email"]', 'aogusidu99@gmail.com', { delay: 50 });
+            await page.type('input[type="email"]', account.username, { delay: 50 });
             await page.keyboard.press('Enter');
             await new Promise(r => setTimeout(r, 2000)); // 等待跳转
         }
@@ -58,7 +61,7 @@ async function autoLoginGmail() {
         try {
             console.log('等待密码框出现...');
             await page.waitForSelector('input[type="password"]', { visible: true, timeout: 5000 });
-            await page.type('input[type="password"]', '1Wndcbd.', { delay: 50 });
+            await page.type('input[type="password"]', account.password, { delay: 50 });
             await page.keyboard.press('Enter');
             console.log('✅ 密码提交完成！');
         } catch (pwdErr) {

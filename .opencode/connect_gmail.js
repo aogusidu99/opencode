@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const { loadAccount } = require('./load_account');
 
 async function connectAndLogin() {
   try {
@@ -26,8 +27,10 @@ async function connectAndLogin() {
     try {
       const emailInput = await page.$('input[type="email"]');
       if (emailInput) {
+         // 账号密码从本地金库 accounts.local.json 读取，不在代码中硬编码
+         const account = loadAccount('gmail');
          console.log('发现账号输入框，开始自动输入账号...');
-         await page.type('input[type="email"]', 'aogusidu99@gmail.com', { delay: 50 });
+         await page.type('input[type="email"]', account.username, { delay: 50 });
          await page.keyboard.press('Enter');
          
          console.log('等待密码框出现...');
@@ -35,7 +38,7 @@ async function connectAndLogin() {
          await new Promise(r => setTimeout(r, 1000)); // 等待过渡动画
          
          console.log('输入密码...');
-         await page.type('input[type="password"]', '1Wndcbd.', { delay: 50 });
+         await page.type('input[type="password"]', account.password, { delay: 50 });
          await page.keyboard.press('Enter');
          
          console.log('✅ 账号密码提交完成！请在浏览器中确认是否成功进入邮箱。');

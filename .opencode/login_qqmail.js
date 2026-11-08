@@ -1,5 +1,6 @@
 const puppeteer = require('puppeteer');
 const { exec } = require('child_process');
+const { loadAccount } = require('./load_account');
 
 async function loginQQMail() {
   let wsUrl = '';
@@ -89,15 +90,17 @@ async function loginQQMail() {
           }
         } catch (switchErr) {}
 
+        // 账号密码从本地金库 accounts.local.json 读取，不在代码中硬编码
+        const account = loadAccount('qqmail');
         console.log('输入 QQ 账号...');
         await targetFrame.waitForSelector('#u', { visible: true, timeout: 5000 });
         await targetFrame.evaluate(() => document.getElementById('u').value = '');
-        await targetFrame.type('#u', 'aogusidu99@qq.com', { delay: 50 });
+        await targetFrame.type('#u', account.username, { delay: 50 });
 
         console.log('输入密码...');
         await targetFrame.waitForSelector('#p', { visible: true });
         await targetFrame.evaluate(() => document.getElementById('p').value = '');
-        await targetFrame.type('#p', '1Wndcbd.', { delay: 50 });
+        await targetFrame.type('#p', account.password, { delay: 50 });
 
         console.log('点击登录按钮...');
         await targetFrame.click('#login_button');
